@@ -23,7 +23,7 @@ def get_system_info():
         temp_cpu = psutil.sensors_temperatures()['coretemp'][0].current
     except Exception as e:
         print(f"Erro ao obter a temperatura da CPU: {e}")
-        # Não levantamos a exceção, apenas imprimimos o erro e usamos o valor padrão
+        
 
     return DadosComputador(cpu_count, mem_livre, disco_livre, temp_cpu)
 
