@@ -7,3 +7,11 @@ class DadosComputador:
 
     def __str__(self):
         return f"CPU: {self.cpu_count}, Mem Livre: {self.mem_livre}, Disco Livre: {self.disco_livre}, Temp CPU: {self.temp_cpu}"
+    
+    def to_dict(self):
+        return {
+            'cpu_count': self.cpu_count,
+            'mem_livre': self.mem_livre,
+            'disco_livre': self.disco_livre,
+            'temp_cpu': self.temp_cpu
+        }

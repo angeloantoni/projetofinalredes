@@ -7,45 +7,41 @@ sys.path.append(project_root)
 
 
 import socket
+import json
 import psutil
-import json  # Para serializar dados para envio
 from comum import config
 from comum import utils
 from comum.classes import DadosComputador
 
 def get_system_info():
-    """Coleta informações do sistema."""
     cpu_count = psutil.cpu_count()
-    mem_livre = utils.bytes_para_gb(psutil.virtual_memory().available)  # Em bytes
-    disco_livre = utils.bytes_para_gb(psutil.disk_usage('/').free)  # Em bytes
+    mem_livre = utils.bytes_para_gb(psutil.virtual_memory().available)
+    disco_livre = utils.bytes_para_gb(psutil.disk_usage('/').free)
+    temp_cpu = -1  # Valor padrão para temperatura
+
     try:
-        temp_cpu = psutil.sensors_temperatures()['coretemp'][0].current  # Requer permissões
+        temp_cpu = psutil.sensors_temperatures()['coretemp'][0].current
     except Exception as e:
-        temp_cpu = -1 # ou algum valor padrão
         print(f"Erro ao obter a temperatura da CPU: {e}")
+        # Não levantamos a exceção, apenas imprimimos o erro e usamos o valor padrão
 
     return DadosComputador(cpu_count, mem_livre, disco_livre, temp_cpu)
 
-
 def main():
-    """Função principal do cliente."""
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     try:
-        client_socket.connect(('localhost', config.SERVER_PORT)) #Conecta ao servidor
-
         dados = get_system_info()
-        dados_json = json.dumps(dados.__dict__)
+        dados_dict = dados.to_dict()
+        dados_json = json.dumps(dados_dict)
         mensagem_criptografada = utils.criptografar(dados_json, config.CHAVE_CRIPTOGRAFIA)
-        client_socket.send(mensagem_criptografada)
 
+        BROADCAST_ADDRESS = '10.25.255.255'  
+        client_socket.sendto(mensagem_criptografada, (BROADCAST_ADDRESS, config.SERVER_PORT))
 
-        resposta_criptografada = client_socket.recv(1024)
-        resposta = utils.descriptografar(resposta_criptografada, config.CHAVE_CRIPTOGRAFIA)
-        print(f"Resposta do servidor: {resposta}")
+        print("Dados enviados via broadcast.")
 
-    except ConnectionRefusedError:
-        print("Servidor não encontrado. Certifique-se de que o servidor está rodando.")
     except Exception as e:
         print(f"Erro no cliente: {e}")
     finally:
